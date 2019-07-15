@@ -19,20 +19,20 @@ namespace SLSInvoicerTest.WooCommerce
             // from date will fetch everything from woocommerce from this date:
 
 
-            // Juli
-            //var fromDate = new DateTime(2018, 7, 1);
-            //var toDate = new DateTime(2018, 7, 31, 23, 59, 59);
-            //var month = "Juli";
+            // Jan
+            var fromDate = new DateTime(2019, 1, 1);
+            var toDate = new DateTime(2019, 1, 31, 23, 59, 59);
+            var month = "Januari";
 
-            // aug
-            var fromDate = new DateTime(2018, 8, 1, 00, 00, 00);
-            var toDate = new DateTime(2018, 8, 31, 23, 59, 59);
-            var month = "Augustus";
+            // Feb
+            //var fromDate = new DateTime(2019, 2, 1, 00, 00, 00);
+            //var toDate = new DateTime(2019, 2, 28, 23, 59, 59);
+            //var month = "Februari";
 
-            // Mei
-            //var fromDate = new DateTime(2018, 9, 1);
-            //var toDate = new DateTime(2018, 9, 30, 23, 59, 59);
-            //var month = "September";
+            // Maart
+            //var fromDate = new DateTime(2019, 3, 1);
+            //var toDate = new DateTime(2019, 3, 31, 23, 59, 59);
+            //var month = "Maart";
 
 
             // moeder aarde woo commerce getting only
@@ -51,17 +51,32 @@ namespace SLSInvoicerTest.WooCommerce
                 { "per_page", "100"},
                 { "page", "1"}
             });
-
+            if (orders.Count >= 100)
+            {
+                var orders2 = await wc.Order.GetAll(new Dictionary<string, string>() {
+                    { "after",  fromDate.ToString("o")},
+                    { "before", toDate.ToString("o")},
+                    { "per_page", "100"},
+                    { "page", "2"}
+                
+                });
+                orders.AddRange(orders2);
+            }   
+        
 
             MakeTotalDocument(orders, month);
 
-            var manualOrders = orders.Where(x => x.payment_method_title != "iDEAL" || int.Parse(x.number) == 1280).ToList();
+            orders = orders.Where(x => x.status != "cancelled").ToList();
+
+            var manualOrders = orders.Where(x => x.payment_method_title != "iDEAL" && x.payment_method_title != "Bancontact").ToList();
+            //var manualOrders = orders.Where(x => x.payment_method_title != "iDEAL" && x.payment_method_title != "Bancontact" && x.payment_method_title != "").ToList();
             MakeListManualOrders(manualOrders, month);
 
-            orders = orders.Where(x => x.payment_method_title == "iDEAL" && int.Parse(x.number) != 1280).ToList();// filter only the paid orders.
+            orders = orders.Where(x => x.payment_method_title == "Bancontact" || x.payment_method_title == "iDEAL").ToList();// filter only the paid orders.
+            //orders = orders.Where(x => x.payment_method_title == "Bancontact" || x.payment_method_title == "iDEAL" || x.payment_method_title == "").ToList();// filter only the paid orders.
             ProcessOders(orders, month);
 
-
+                
         }
 
         private void MakeTotalDocument(List<Order> orders, string month)
@@ -74,7 +89,7 @@ namespace SLSInvoicerTest.WooCommerce
                 var totalTax = orders.Sum(x => x.total_tax);
                 var totalOrders = orders.Count;
 
-                Assert.IsTrue(totalOrders < 100);// if there are more you need to have paging. now it only gets 100 sales items.
+                Assert.IsTrue(totalOrders < 200);// if there are more you need to have paging. now it only gets 100 sales items.
                 file.WriteLine($"Total orders is:{totalOrders}");
                 file.WriteLine($"Total Omzet is:{ totalOmzet}");
                 file.WriteLine($"Total tax is:{ totalTax}");
@@ -92,7 +107,7 @@ namespace SLSInvoicerTest.WooCommerce
                 var totalTax = manualOrders.Sum(x => x.total_tax);
                 var totalOrders = manualOrders.Count;
 
-                Assert.IsTrue(totalOrders < 100);// if there are more you need to have paging. now it only gets 100 sales items.
+                Assert.IsTrue(totalOrders < 200);// if there are more you need to have paging. now it only gets 100 sales items.
                 file.WriteLine($"Waar total orders is:{totalOrders}");
                 file.WriteLine($"Waar total Omzet is:{ totalOmzet}");
                 file.WriteLine($"Waar total tax is:{ totalTax}");
@@ -122,7 +137,7 @@ namespace SLSInvoicerTest.WooCommerce
                 var totalTax = orders.Sum(x => x.total_tax);
                 var totalOrders = orders.Count;
 
-                Assert.IsTrue(totalOrders < 100);// if there are more you need to have paging. now it only gets 100 sales items.
+                Assert.IsTrue(totalOrders < 200);// if there are more you need to have paging. now it only gets 100 sales items.
                 file.WriteLine($"Waar total orders is:{totalOrders}");
                 file.WriteLine($"Waar total Omzet is:{ totalOmzet}");
                 file.WriteLine($"Waar total tax is:{ totalTax}");
@@ -143,7 +158,7 @@ namespace SLSInvoicerTest.WooCommerce
                 var totalOmzetRestTaxLow = orders.SelectMany(x => x.line_items)
                     .Where(x => !IsKraamPakketProduct(x.product_id))
                     .Where(x => x.taxes.Count > 0) // list should not be empty
-                    .Where(x => x.taxes.First().id == "2") //2 is tax low
+                    .Where(x => x.taxes.First().id == "4") //2 is tax low
                     .Sum(x => x.total_tax);
 
                 var totalOmzetRestTaxHigh = orders.SelectMany(x => x.line_items)
@@ -155,7 +170,7 @@ namespace SLSInvoicerTest.WooCommerce
                 var totalOmzetRestLow = orders.SelectMany(x => x.line_items)
                     .Where(x => !IsKraamPakketProduct(x.product_id))
                     .Where(x => x.taxes.Count > 0) // list should not be empty
-                    .Where(x => x.taxes.First().id == "2") //2 is tax low
+                    .Where(x => x.taxes.First().id == "4") //2 is tax low
                     .Sum(x => x.total);
 
                 var totalOmzetRestHigh = orders.SelectMany(x => x.line_items)
@@ -182,7 +197,7 @@ namespace SLSInvoicerTest.WooCommerce
                 // Bereken btw's rest omzet
                 var totalOmzetShippingTaxLow = orders.SelectMany(x => x.shipping_lines)
                     .Where(x => x.taxes.Count > 0) // list should not be empty
-                    .Where(x => x.taxes.First().id == "2")
+                    .Where(x => x.taxes.First().id == "4")
                     .Sum(x => x.total_tax);
 
                 var totalOmzetShippingTaxHigh = orders.SelectMany(x => x.shipping_lines)
@@ -192,7 +207,7 @@ namespace SLSInvoicerTest.WooCommerce
 
                 var totalOmzetShippingLow = orders.SelectMany(x => x.shipping_lines)
                     .Where(x => x.taxes.Count > 0) // list should not be empty
-                    .Where(x => x.taxes.First().id == "2")
+                    .Where(x => x.taxes.First().id == "4")
                     .Sum(x => x.total);
 
                 var totalOmzetShippingHigh = orders.SelectMany(x => x.shipping_lines)
